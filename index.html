@@ -283,6 +283,17 @@ body.debug .touch-zone {
 #dots-overlay.shake {
     animation: shake 0.35s;
 }
+body.adjust-individual .dot {
+    cursor: move;
+    border: 2px solid orange !important;
+    background: rgba(255,165,0,0.2) !important;
+}
+
+body.adjust-individual .dot.dragging {
+    border-color: red !important;
+    background: rgba(255,0,0,0.3) !important;
+    z-index: 100;
+}
 </style>
 </head>
 <body>
