@@ -286,13 +286,21 @@ body.debug .touch-zone {
 body.adjust-individual .dot {
     cursor: move;
     border: 2px solid orange !important;
-    background: rgba(255,165,0,0.2) !important;
+    background: rgba(255,165,0,0.3) !important;
+    position: relative;
+    z-index: 100;
 }
 
 body.adjust-individual .dot.dragging {
     border-color: red !important;
-    background: rgba(255,0,0,0.3) !important;
-    z-index: 100;
+    background: rgba(255,0,0,0.5) !important;
+    z-index: 101;
+}
+
+body.adjust-individual #dots-overlay {
+    background: rgba(255,255,0,0.1);
+    padding: 10px;
+    border: 2px dashed orange;
 }
 </style>
 </head>
@@ -360,7 +368,8 @@ body.adjust-individual .dot.dragging {
 <button id="settingsBtn" onclick="menu()">⚙️</button>
 <div id="menu">
     <div class="menu-opt" onclick="toggleDebug()">👁️ Voir les zones</div>
-    <div class="menu-opt" onclick="adjustDots()">⚪ Ajuster les ronds</div>
+    <div class="menu-opt" onclick="adjustDots()">⚪ Ajuster groupe de ronds</div>
+    <div class="menu-opt" onclick="toggleIndividualAdjust()">🎯 Ajuster ronds individuels</div>
     <div class="menu-opt" onclick="change()">🖼️ Changer screenshots</div>
     <div class="menu-opt" onclick="location.reload()">🔄 Recommencer</div>
 </div>
@@ -474,7 +483,6 @@ function unlockScreen(celeb) {
     lock.style.display = 'none';
     if(navigator.vibrate) navigator.vibrate([50,100,50]);
 }
-
 // Settings
 function menu() {
     document.getElementById('menu').classList.toggle('show');
@@ -486,9 +494,15 @@ function toggleDebug() {
 }
 
 let adjustMode = false;
-let draggedDot = null;
+let individualAdjustMode = false;
+let draggedElement = null;
 
 function adjustDots() {
+    // Désactiver le mode individuel si actif
+    if(individualAdjustMode) {
+        toggleIndividualAdjust();
+    }
+    
     adjustMode = !adjustMode;
     if(adjustMode) {
         dotsOverlay.style.background = 'rgba(255,255,0,0.2)';
@@ -512,7 +526,7 @@ function adjustDots() {
 
 function startDrag(e) {
     if(!adjustMode) return;
-    draggedDot = dotsOverlay;
+    draggedElement = dotsOverlay;
     const isTouch = e.type === 'touchstart';
     const clientX = isTouch ? e.touches[0].clientX : e.clientX;
     const clientY = isTouch ? e.touches[0].clientY : e.clientY;
@@ -524,28 +538,92 @@ function startDrag(e) {
     e.preventDefault();
 }
 
+// Nouvelle fonction pour ajuster les cercles individuellement
+function toggleIndividualAdjust() {
+    // Désactiver le mode groupe si actif
+    if(adjustMode) {
+        adjustDots();
+    }
+    
+    individualAdjustMode = !individualAdjustMode;
+    document.body.classList.toggle('adjust-individual');
+    
+    if(individualAdjustMode) {
+        // Activer le drag sur chaque dot
+        dots.forEach(dot => {
+            dot.style.position = 'relative';
+            dot.onmousedown = startDotDrag;
+            dot.ontouchstart = startDotDrag;
+        });
+    } else {
+        // Désactiver
+        dots.forEach(dot => {
+            dot.onmousedown = null;
+            dot.ontouchstart = null;
+        });
+    }
+    document.getElementById('menu').classList.remove('show');
+}
+
+function startDotDrag(e) {
+    if(!individualAdjustMode) return;
+    
+    draggedElement = e.target;
+    draggedElement.classList.add('dragging');
+    
+    const isTouch = e.type === 'touchstart';
+    const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+    const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+    
+    const rect = draggedElement.getBoundingClientRect();
+    draggedElement._offsetX = clientX - rect.left - rect.width/2;
+    draggedElement._offsetY = clientY - rect.top - rect.height/2;
+    
+    e.preventDefault();
+    e.stopPropagation();
+}
+
 document.addEventListener('mousemove', doDrag);
 document.addEventListener('touchmove', doDrag);
 
 function doDrag(e) {
-    if(!draggedDot) return;
+    if(!draggedElement) return;
+    
     const isTouch = e.type === 'touchmove';
     const clientX = isTouch ? e.touches[0].clientX : e.clientX;
     const clientY = isTouch ? e.touches[0].clientY : e.clientY;
     
-    const lockRect = lock.getBoundingClientRect();
-    const newLeft = ((clientX - lockRect.left - dotsOverlay._offsetX) / lockRect.width) * 100;
-    const newTop = ((clientY - lockRect.top - dotsOverlay._offsetY) / lockRect.height) * 100;
-    
-    dotsOverlay.style.left = newLeft + '%';
-    dotsOverlay.style.top = newTop + '%';
-    dotsOverlay.style.transform = 'none';
+    if(draggedElement === dotsOverlay) {
+        // Déplacer tout le groupe
+        const lockRect = lock.getBoundingClientRect();
+        const newLeft = ((clientX - lockRect.left - dotsOverlay._offsetX) / lockRect.width) * 100;
+        const newTop = ((clientY - lockRect.top - dotsOverlay._offsetY) / lockRect.height) * 100;
+        
+        dotsOverlay.style.left = newLeft + '%';
+        dotsOverlay.style.top = newTop + '%';
+        dotsOverlay.style.transform = 'none';
+    } else {
+        // Déplacer un cercle individuel
+        const overlayRect = dotsOverlay.getBoundingClientRect();
+        const newLeft = clientX - overlayRect.left - draggedElement._offsetX - draggedElement.offsetWidth/2;
+        const newTop = clientY - overlayRect.top - draggedElement._offsetY - draggedElement.offsetHeight/2;
+        
+        draggedElement.style.left = newLeft + 'px';
+        draggedElement.style.top = newTop + 'px';
+    }
     
     e.preventDefault();
 }
 
-document.addEventListener('mouseup', () => { draggedDot = null; });
-document.addEventListener('touchend', () => { draggedDot = null; });
+document.addEventListener('mouseup', endDrag);
+document.addEventListener('touchend', endDrag);
+
+function endDrag() {
+    if(draggedElement && draggedElement !== dotsOverlay) {
+        draggedElement.classList.remove('dragging');
+    }
+    draggedElement = null;
+}
 
 function change() {
     unlock = false;
@@ -564,6 +642,7 @@ document.addEventListener('click', e => {
         document.getElementById('menu').classList.remove('show');
     }
 });
+
 </script>
 </body>
 </html>
