@@ -6,7 +6,7 @@
 
 <!-- Viewport pour mobile -->
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <!-- Mode plein écran iOS -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -33,15 +33,13 @@ body {
     background: #000;
     width: 100vw;
     height: 100vh;
-    body {
-      margin: 0;
-      padding: 0;
-      /* Padding dynamique pour éviter les chevauchements */
-      padding-top: env(safe-area-inset-top);
-      padding-bottom: env(safe-area-inset-bottom);
-      min-height: 100vh; /* Assure que le body prend toute la hauteur */
-      box-sizing: border-box; /* Inclut les paddings dans la hauteur */
-    }
+    margin: 0;
+    padding: 0;
+    /* Padding dynamique pour éviter les chevauchements */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    min-height: 100vh; /* Assure que le body prend toute la hauteur */
+    box-sizing: border-box; /* Inclut les paddings dans la hauteur */
 }
 
 /* LOCKSCREEN - Screenshot en fond */
